@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 using UnityEngine.SceneManagement;
+
 public class SpaceshipController : MonoBehaviour
 {
     public List<EnemySpaceShooter> Enemies;
@@ -12,7 +13,7 @@ public class SpaceshipController : MonoBehaviour
     public GameObject bulletPrefab;
     public Transform BulletSpawnHere;
     public GameObject GameClearScreen;
-    public TextMeshProUGUI textValue,hpValue;
+    public TextMeshProUGUI textValue, hpValue;
     public int score;
     public int hitponts;
     bool isGameClear = false;
@@ -20,20 +21,20 @@ public class SpaceshipController : MonoBehaviour
     public GameObject GameOverScreen;
     private bool canMove = true;
     private bool canShoot = true;
-    // Start is called before the first frame update
+
     void Start()
     {
         storeHP = hitponts;
     }
 
-    // Update is called once per frame
     void Update()
     {
         textValue.text = score.ToString();
         hpValue.text = hitponts.ToString();
+
         if (Input.GetKeyDown(KeyCode.Space) && canShoot)
         {
-            SpawnBullet(); 
+            SpawnBullet();
         }
 
         if (hitponts <= 0)
@@ -43,13 +44,6 @@ public class SpaceshipController : MonoBehaviour
             GameOverScreen.SetActive(true);
             hitponts = 0;
         }
-        /*OnGameClear();
-        if (isGameClear && hitponts > 0)
-        {
-
-            isGameClear = false;
-
-        }*/
     }
 
     private void FixedUpdate()
@@ -64,11 +58,12 @@ public class SpaceshipController : MonoBehaviour
 
     public void SpawnBullet()
     {
-        //Instantiate to clone a game object
-        GameObject bullet = Instantiate(bulletPrefab, BulletSpawnHere.position, Quaternion.identity);
-        Rigidbody2D bulletRb = bullet.GetComponent<Rigidbody2D>();
-        bulletRb.linearVelocity = new Vector2(0f, BulletSpeed);
-
+        GameObject bullet = ObjectPoolManager.Instance.GetFromPool("PlayerBullets", BulletSpawnHere.position, Quaternion.identity);
+        if (bullet != null)
+        {
+            Rigidbody2D bulletRb = bullet.GetComponent<Rigidbody2D>();
+            bulletRb.linearVelocity = new Vector2(0f, BulletSpeed);
+        }
     }
 
     private void OnTriggerEnter2D(Collider2D collision)
@@ -76,19 +71,18 @@ public class SpaceshipController : MonoBehaviour
         if (collision.CompareTag("EnemyBullet"))
         {
             hitponts--;
-            Destroy(collision.gameObject);
+            ObjectPoolManager.Instance.ReturnToPool("EnemyBullets", collision.gameObject);
         }
     }
 
     public void RestartGame()
     {
-        for (int i = 0; i < Enemies.Count; i++)
+        foreach (EnemySpaceShooter enemy in Enemies)
         {
-            Enemies[i].transform.position = Enemies[i].InitialPosition;
-            Enemies[i].gameObject.SetActive(false);
-            //Delays the call of a method in Ienumerator
-            StartCoroutine(DelayEnemiesActive());
+            enemy.transform.position = enemy.InitialPosition;
+            enemy.gameObject.SetActive(false);
         }
+        StartCoroutine(DelayEnemiesActive());
         canMove = true;
         canShoot = true;
         hitponts = storeHP;
@@ -96,24 +90,27 @@ public class SpaceshipController : MonoBehaviour
         isGameClear = false;
         GameOverScreen.SetActive(false);
     }
+
     IEnumerator DelayEnemiesActive()
     {
         yield return new WaitForSeconds(0.25f);
-        for (int i = 0; i < Enemies.Count; i++)
+        foreach (EnemySpaceShooter enemy in Enemies)
         {
-            Enemies[i].gameObject.SetActive(true);
+            enemy.gameObject.SetActive(true);
         }
     }
+
     public void RestartLevel()
     {
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
+
     public void OnGameClear()
     {
         isGameClear = true;
-        for (int i = 0; i < Enemies.Count; i++)
+        foreach (EnemySpaceShooter enemy in Enemies)
         {
-            if (Enemies[i].gameObject.activeSelf)
+            if (enemy.gameObject.activeSelf)
             {
                 isGameClear = false;
                 break;
@@ -125,4 +122,3 @@ public class SpaceshipController : MonoBehaviour
         }
     }
 }
-
